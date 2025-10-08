@@ -1,67 +1,88 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: invoice-postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: inventary
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - invoice-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    postgres:
+        image: postgres:15-alpine
+        container_name: invoice-postgres
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: password
+            POSTGRES_DB: inventary
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+            - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+        networks:
+            - invoice-network
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
 
-  invoice-calculator-java:
-    build:
-      context: ./InvoiceCalculatorJava
-      dockerfile: Dockerfile
-    container_name: invoice-java
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: password
-      DB_NAME: inventary
-    ports:
-      - "8080:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - invoice-network
+    invoice-calculator-java:
+        build:
+            context: ./InvoiceCalculatorJava
+            dockerfile: Dockerfile
+        container_name: invoice-java
+        environment:
+            DB_HOST: postgres
+            DB_PORT: 5432
+            DB_USER: postgres
+            DB_PASSWORD: password
+            DB_NAME: inventary
+        ports:
+            - "8080:8080"
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - invoice-network
 
-  invoice-calculator-python:
-    build:
-      context: ./InvoiceCalculatorPython
-      dockerfile: Dockerfile
-    container_name: invoice-python
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: password
-      DB_NAME: inventary
-    ports:
-      - "8081:8081"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - invoice-network
+    invoice-calculator-python:
+        build:
+            context: ./InvoiceCalculatorPython
+            dockerfile: Dockerfile
+        container_name: invoice-python
+        environment:
+            DB_HOST: postgres
+            DB_PORT: 5432
+            DB_USER: postgres
+            DB_PASSWORD: password
+            DB_NAME: inventary
+        ports:
+            - "8081:8081"
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - invoice-network
+
+    invoice-controller:
+        build:
+            context: ./controller
+            dockerfile: Dockerfile
+        container_name: invoice-controller
+        environment:
+            ENABLE_PYTHON: "true"
+            ENABLE_JAVA: "true"
+            ENABLE_CSHARP: "false"
+            PYTHON_URL: "http://invoice-calculator-python:8081"
+            JAVA_URL: "http://invoice-calculator-java:8080"
+            CSHARP_URL: "http://invoice-calculator-csharp:5000"
+            VOTE_PRECISION: "2"
+            SERVICE_TIMEOUT_SECS: "15"
+        depends_on:
+            - invoice-calculator-python
+        ports:
+            - "9000:9000"
+        networks:
+            - invoice-network
 
 networks:
-  invoice-network:
-    driver: bridge
+    invoice-network:
+        driver: bridge
 
 volumes:
-  postgres_data:
+    postgres_data:
