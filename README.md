@@ -15,7 +15,35 @@ Both implementations follow a layered architecture:
 - **Services**: Business logic layer
 - **Controllers/Routers**: REST API endpoints
 
-## Database Setup
+## Quick Start with Docker Compose
+
+The easiest way to run all services (PostgreSQL + both APIs) is using Docker Compose:
+
+```bash
+docker-compose up --build
+```
+
+This will start:
+- **PostgreSQL** on port 5432 (with automatic database initialization)
+- **Java API** on port 8080
+- **Python API** on port 8081
+
+To run in detached mode:
+```bash
+docker-compose up --build -d
+```
+
+To stop all services:
+```bash
+docker-compose down
+```
+
+To stop and remove volumes (database data):
+```bash
+docker-compose down -v
+```
+
+### Database Setup
 
 Both applications use the same PostgreSQL database schema. Run the initialization script:
 
