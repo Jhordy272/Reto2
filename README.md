@@ -8,6 +8,7 @@ Both applications provide the same functionality for calculating invoices based 
 
 ## Architecture
 
+
 Both implementations follow a layered architecture:
 - **Models/Entities**: Database entities
 - **DTOs/Schemas**: Data transfer objects for API requests/responses
