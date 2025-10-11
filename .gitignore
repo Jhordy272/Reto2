@@ -97,3 +97,29 @@ logs/
 
 # Claude
 .claude
+
+# DotNet
+# Archivos de binarios y dependencias
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+# Archivos de configuración específicos del usuario
+*.user
+*.suo
+*.userossc
+
+# Archivos de Visual Studio y otros entornos
+.vs/
+.vsconfig
+*.sln.iml
+
+# Archivos de dependencias de Node.js
+node_modules/
+
+# Archivos de caché y temporales
+.cache/
+*.tmp
+*~

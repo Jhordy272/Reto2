@@ -58,23 +58,42 @@ services:
                 condition: service_healthy
         networks:
             - invoice-network
-
+    invoice-calculator-csharp:
+      build:
+        context: ./InvoiceCalculatorC/InvoiceCalculatorC
+        dockerfile: Dockerfile
+      container_name: invoice-csharp
+      environment:
+        DB_HOST: postgres
+        DB_PORT: 5432
+        DB_USER: postgres
+        DB_PASSWORD: password
+        DB_NAME: inventary
+      ports:
+        - "5024:5024"
+      depends_on:
+        postgres:
+          condition: service_healthy
+      networks:
+        - invoice-network
     invoice-controller:
         build:
-            context: ./controller
+            context: ./Controller
             dockerfile: Dockerfile
         container_name: invoice-controller
         environment:
             ENABLE_PYTHON: "true"
             ENABLE_JAVA: "true"
-            ENABLE_CSHARP: "false"
+            ENABLE_CSHARP: "true"
             PYTHON_URL: "http://invoice-calculator-python:8081"
             JAVA_URL: "http://invoice-calculator-java:8080"
-            CSHARP_URL: "http://invoice-calculator-csharp:5000"
+            CSHARP_URL: "http://invoice-calculator-csharp:5024"
             VOTE_PRECISION: "2"
             SERVICE_TIMEOUT_SECS: "15"
         depends_on:
             - invoice-calculator-python
+            - invoice-calculator-java
+            - invoice-calculator-csharp
         ports:
             - "9000:9000"
         networks:
