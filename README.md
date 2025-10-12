@@ -214,3 +214,38 @@ curl -X POST "http://localhost:8090/logs" \
 curl -X POST "http://localhost:8090/logs" \
   -H "Content-Type: application/json" \
   -d '{"service":"invoice-controller","level":"ERROR","message":"Unauthorized admin access attempt at 03:12 UTC from 10.0.5.23","context":{"user":"qa6","ip":"10.0.5.23"}}'
+
+
+ACCESO FUERA DE HORAS
+
+
+# 1) unauthorized + denied  -> sk >= 3.0
+curl -X POST "http://localhost:8090/logs" \
+  -H "Content-Type: application/json" \
+  -d '{"service":"invoice-controller","level":"ERROR","message":"Unauthorized admin access denied at 03:12 UTC from 10.0.5.23","context":{"user":"qa6","ip":"10.0.5.23"}}'
+
+
+curl -X POST "http://localhost:8090/logs" \
+  -H "Content-Type: application/json" \
+  -d '{"service":"invoice-controller","level":"ERROR","message":"Unauthorized admin access attempt at 03:12 UTC from 10.0.5.23","context":{"user":"qa6","ip":"10.0.5.23"}}'
+
+
+
+
+CON ESTO SE REQALIZA EL CALENTAMIENTO
+
+# 1) 100 logs normales, con mensajes muy parecidos
+for i in $(seq 1 100); do
+  curl -s -X POST "http://localhost:8090/logs" \
+    -H "Content-Type: application/json" \
+    -d "{\"service\":\"invoice-controller\",\"level\":\"INFO\",\"message\":\"Invoice processed successfully for user ${i}\",\"context\":{\"user\":\"seed${i}\"}}" >/dev/null
+  sleep 0.03   # pequeño delay para NO disparar la regla de burst
+done
+
+# 2) 100 más con ligera variación (sigue siendo “normal”)
+for i in $(seq 101 200); do
+  curl -s -X POST "http://localhost:8090/logs" \
+    -H "Content-Type: application/json" \
+    -d "{\"service\":\"invoice-controller\",\"level\":\"INFO\",\"message\":\"Invoice processed successfully; items=3; total=\$${i}\",\"context\":{\"user\":\"seed${i}\"}}" >/dev/null
+  sleep 0.03
+done
