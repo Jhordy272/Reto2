@@ -180,3 +180,37 @@ Both APIs handle the following error cases:
 - **404**: Product not found
 - **400**: Insufficient stock for product
 - **500**: Internal server error
+
+
+
+
+
+AQUI PARA PROBAR
+
+curl -X POST "http://localhost:8090/logs" \
+  -H "Content-Type: application/json" \
+  -d '{"service":"invoice-controller","level":"ERROR","message":"Fatal exception: DB connection refused","context":{"user":"dsaa"}}'
+
+curl "http://localhost:8090/logs?limit=5"
+
+PGPASSWORD=password psql -h localhost -p 5433 -U postgres -d logsdb -c \
+"SELECT detected_at,service,rule,score,sample_log_id FROM log_insights ORDER BY id DESC LIMIT 5;"
+
+
+
+curl -X POST "http://localhost:8090/logs" \
+  -H "Content-Type: application/json" \
+  -d '{"service":"invoice-controller","level":"ERROR","message":"Fatal anomaly: checksum mismatch in payment DAG block 392","context":{"user":"qa-rare"}}'
+
+
+
+borrado masivo sospechoso
+
+curl -X POST "http://localhost:8090/logs" \
+  -H "Content-Type: application/json" \
+  -d '{"service":"invoice-controller","level":"ERROR","message":"Fatal: 1024 records deleted from invoices without change request","context":{"user":"qa5"}}'
+
+
+curl -X POST "http://localhost:8090/logs" \
+  -H "Content-Type: application/json" \
+  -d '{"service":"invoice-controller","level":"ERROR","message":"Unauthorized admin access attempt at 03:12 UTC from 10.0.5.23","context":{"user":"qa6","ip":"10.0.5.23"}}'
