@@ -368,4 +368,5 @@ curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json"
 
  PGPASSWORD=password psql -h localhost -p 5433 -U postgres -d logsdb -c "SELECT detected_at,service,rule,score,sample_log_id FROM log_insights ORDER BY id DESC LIMIT 5;"
 
- 
+ PGPASSWORD=password psql -h localhost -p 5433 -U postgres -d logsdb -c \
+"SELECT id, detected_at, service, rule, score, sample_msg FROM log_insights ORDER BY id DESC LIMIT 20;"
