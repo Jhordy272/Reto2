@@ -249,3 +249,123 @@ for i in $(seq 101 200); do
     -d "{\"service\":\"invoice-controller\",\"level\":\"INFO\",\"message\":\"Invoice processed successfully; items=3; total=\$${i}\",\"context\":{\"user\":\"seed${i}\"}}" >/dev/null
   sleep 0.03
 done
+
+
+
+
+PASOS
+
+
+./test_send.sh
+
+LOGS NORMALES
+
+# 1
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" -d '{"service":"service-a","level":"INFO","message":"Scheduled job completed","context":{"user":"qa1"}}'
+
+# 2
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" -d '{"service":"service-b","level":"INFO","message":"Cache refreshed","context":{"user":"qa2"}}'
+
+# 3
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" -d '{"service":"service-c","level":"INFO","message":"Request processed OK","context":{"path":"/api/health"}}'
+
+# 4
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" -d '{"service":"service-d","level":"INFO","message":"OK healthcheck","context":{}}'
+
+# 5 (heartbeat)
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" -d '{"service":"scheduler","level":"INFO","message":"heartbeat","context":{"job_id":"sync-1"}}'
+
+
+for i in $(seq 1 200); do
+  curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+    -d "{\"service\":\"warmup-$((i%8))\",\"level\":\"INFO\",\"message\":\"Routine heartbeat #$i\",\"context\":{\"user\":\"qa$((i%20))\"}}"
+done
+
+
+
+LOGS DE FALLA
+
+
+ACCESOS NO AUTORIZADOS
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"invoice-controller","level":"ERROR","message":"Unauthorized admin access attempt at 03:12 UTC from 10.0.5.23","context":{"user":"qa6","ip":"10.0.5.23"}}'
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"auth-service","level":"WARN","message":"Permission denied for /admin by user alice","context":{"user":"alice","path":"/admin"}}'
+
+
+Escalada de privilegios
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"rbac","level":"ERROR","message":"Privilege escalation attempt detected","context":{"user":"guest-223","role_from":"viewer","role_to":"admin"}}'
+
+
+CAMBIOS DE CONFIGURACIÖN SOSPECHPOSOS
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"config-service","level":"ERROR","message":"Unauthorized config push to production","context":{"actor":"ci-bot","branch":"hotfix/unknown"}}'
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"deploy","level":"WARN","message":"Manual deploy performed outside pipeline","context":{"user":"ops-admin","commit":"abc123"}}'
+
+
+ERRORES CRITICOS
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"payment-gateway","level":"ERROR","message":"Fatal exception: DB connection refused","context":{"user":"payment-svc"}}'
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"api-gateway","level":"ERROR","message":"Unhandled exception: NullPointer in module X","context":{"module":"X","trace":"...stack..."}}'
+
+
+Picos y bursts (varios errores seguidos)
+
+for i in $(seq 1 8); do
+  curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+    -d "{\"service\":\"payment-gateway\",\"level\":\"ERROR\",\"message\":\"Fatal exception: DB connection refused #$i\",\"context\":{\"user\":\"payment-svc\"}}"
+done
+
+
+
+Fuerza bruta / múltiples fallos de login desde IPs
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"auth-service","level":"ERROR","message":"Login failed for user admin from 10.0.0.11","context":{"ip":"10.0.0.11","user":"admin"}}'
+
+for ip in 10.0.0.10 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14; do
+  curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+    -d "{\"service\":\"auth-service\",\"level\":\"ERROR\",\"message\":\"Login failed for user admin from $ip\",\"context\":{\"ip\":\"$ip\",\"user\":\"admin\"}}"
+done
+
+
+Manipulación de datos / cambios sospechosos
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"db-service","level":"ERROR","message":"Massive inventory change: decreased 500 rows by user deployer","context":{"user":"deployer","rows_changed":500}}'
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"orders","level":"WARN","message":"Row deleted unexpectedly: order_id 12345","context":{"order_id":12345,"user":"unknown"}}'
+
+
+INYECCION
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"web","level":"ERROR","message":"SQL error near \"DROP TABLE users;\"","context":{"input":"DROP TABLE users;"}}'
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"app","level":"ERROR","message":"Suspicious command execution: sudo rm -rf /tmp/attack","context":{"cmd":"sudo rm -rf /tmp/attack","user":"script"}}'
+
+
+MENSAJES RAROS
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"service-x","level":"WARN","message":"Suspicious payload size change detected: 900MB","context":{"size":"900MB"}}'
+
+curl -s -X POST "http://localhost:8090/logs" -H "Content-Type: application/json" \
+  -d '{"service":"service-y","level":"WARN","message":"Config checksum mismatch on node-7","context":{"node":"node-7","expected":"abc","got":"def"}}'
+
+
+ PGPASSWORD=password psql -h localhost -p 5433 -U postgres -d logsdb -c "SELECT detected_at,service,rule,score,sample_log_id FROM log_insights ORDER BY id DESC LIMIT 5;"
+
+ 
